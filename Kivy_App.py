@@ -15,7 +15,7 @@ def on_start_up():
     global model,numResults, maxTokens,stopSequences,topKReturn,temperature,full_prompt,total_cost,convo_cost, initial_prompt
 
     # Change the position of these
-    model = "j1-jumbo"  # Options are j1-large or j1-jumbo
+    model = "j1-large"  # Options are j1-large or j1-jumbo
     numResults = 1  # A value greater than 1 is meaningful only in case of non-greedy decoding, i.e. temperature > 0.
     maxTokens = 100  # The maximum number of tokens to generate per result
     stopSequences = ["\n"]
@@ -25,7 +25,7 @@ def on_start_up():
     total_cost = find_total_cost(model)
     initial_prompt = prompt_creation("physics")
     full_prompt = prompt_creation("physics")
-    print(full_prompt)
+
 
 
 def run_chatbot(prompt):
@@ -128,7 +128,7 @@ class MyGrid(GridLayout):
         self.add_widget(self.useless_bar)
         self.subtitle1 = Label(text="Physics Related Conversation", font_size=18, underline=True)
         self.add_widget(self.subtitle1)
-        self.chatbox = Label(text=f"""""",size_hint=(0,4),halign="left")
+        self.chatbox = Label(text=f"""""",size_hint=(0,4))
         self.add_widget(self.chatbox)
         self.useless_bar2 = Label(text="-----------------------------------------------------------------------", font_size = 30)
         self.add_widget(self.useless_bar2)
@@ -162,11 +162,14 @@ class MyGrid(GridLayout):
         global full_prompt,convo_cost,ID,AI,initial_prompt
         text = self.prompt.text
         full_prompt += f"\n{ID}: {text}\n{AI}:"
+        print(f"START:{full_prompt}")
         ai_output = run_chatbot(full_prompt)
         full_prompt += f"{ai_output[0]}"
         cost_of_op = ai_output[1]
-
-        self.chatbox.text = f"{full_prompt[len(initial_prompt)::]} - Costing {cost_of_op}"
+        if ai_output[0].strip()=="":
+            ai_output[0]="Sorry. I've had a brain fart and have no idea what we were just talking about. You should probably restart me."
+        self.chatbox.text = self.chatbox.text+ f"{ID}: {text}\n{AI}:{ai_output[0]}\n"
+        print(f"END:{full_prompt}")
         self.prompt.text = ""
         convo_cost+=cost_of_op
         self.subtitle3.text = f"Current Cost of Conversation = {convo_cost}"
