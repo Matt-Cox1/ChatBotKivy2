@@ -12,10 +12,10 @@ import requests
 # Design elements
 
 def on_start_up():
-    global model,numResults, maxTokens,stopSequences,topKReturn,temperature,full_prompt,total_cost,convo_cost
-    full_prompt = ""
+    global model,numResults, maxTokens,stopSequences,topKReturn,temperature,full_prompt,total_cost,convo_cost, initial_prompt
+
     # Change the position of these
-    model = "j1-large"  # Options are j1-large or j1-jumbo
+    model = "j1-jumbo"  # Options are j1-large or j1-jumbo
     numResults = 1  # A value greater than 1 is meaningful only in case of non-greedy decoding, i.e. temperature > 0.
     maxTokens = 100  # The maximum number of tokens to generate per result
     stopSequences = ["\n"]
@@ -23,6 +23,9 @@ def on_start_up():
     temperature = 0.6  # Can go from 0 to 5.
     convo_cost = 0
     total_cost = find_total_cost(model)
+    initial_prompt = prompt_creation("physics")
+    full_prompt = prompt_creation("physics")
+    print(full_prompt)
 
 
 def run_chatbot(prompt):
@@ -79,6 +82,32 @@ def set_files_to_0():
     file_jumbo = open("JumboCost.txt", "w")
     file_jumbo.write("0")
 
+def prompt_creation(program_type):
+    global temperature, model,chatbot,ID,AI
+    if program_type.lower() =="physics":
+        ID = "Question"
+        AI = "Physics guru answer"
+        temperature = 0.3
+        model = "j1-jumbo"
+        chatbot = False
+        prompt = "A specialist in theoretical physics concisely answers meaningful questions about the nature of the universe and mathematical laws.\n\n"
+        prompt += f"{ID}: What is spin in quantum mechanics?\n"
+        prompt += f"{AI}: Spin is intrinsic angular momentum associated with elementary particles. It is a purely quantum mechanical phenomenon without any analog in classical physics.\n"
+        prompt += f"{ID}: What is Newton's first law?\n"
+        prompt += f"{AI}: An object remains in the same state of motion unless a resultant force.\n"
+        return prompt
+    if program_type.lower() =="chatbot":
+        ID = "Question"
+        AI = "Physics guru answer"
+        temperature = 0.3
+        model = "j1-jumbo"
+        chatbot = False
+        prompt = "A specialist in theoretical physics concisely answers meaningful questions about the nature of the universe and mathematical laws.\n\n"
+        prompt += f"{ID}: What is spin in quantum mechanics?\n"
+        prompt += f"{AI}: Spin is intrinsic angular momentum associated with elementary particles. It is a purely quantum mechanical phenomenon without any analog in classical physics.\n"
+        prompt += f"{ID}: What is Newton's first law?\n"
+        prompt += f"{AI}: An object remains in the same state of motion unless a resultant force.\n"
+        return prompt
 
 on_start_up()
 
@@ -89,17 +118,17 @@ class MyGrid(GridLayout):
         self.cols = 1
 
         # Lets add widgets
-        self.title = Label(text="Ask me anything", font_size = 40, size_hint=(0,1))
+        self.title = Label(text="Ask me anything-AI21 Jurassic Model NLP", font_size = 40, size_hint=(0,1), underline=True)
         self.add_widget(self.title)
-        self.subtitle1 = Label(text="Conversation", font_size=18)
-        self.add_widget(self.subtitle1)
         self.subtitle2 = Label(text=f"Current Cost on model {model} = {find_total_cost(model)}", font_size=15)
         self.add_widget(self.subtitle2)
         self.subtitle3 = Label(text=f"Current Cost of conversation = {convo_cost}", font_size=15)
         self.add_widget(self.subtitle3)
         self.useless_bar = Label(text="-----------------------------------------------------------------------", font_size = 30)
         self.add_widget(self.useless_bar)
-        self.chatbox = Label(text=f"""""",size_hint=(0,4))
+        self.subtitle1 = Label(text="Physics Related Conversation", font_size=18, underline=True)
+        self.add_widget(self.subtitle1)
+        self.chatbox = Label(text=f"""""",size_hint=(0,4),halign="left")
         self.add_widget(self.chatbox)
         self.useless_bar2 = Label(text="-----------------------------------------------------------------------", font_size = 30)
         self.add_widget(self.useless_bar2)
@@ -110,34 +139,37 @@ class MyGrid(GridLayout):
 
         #Inner grid:
         self.inside = GridLayout()
-        self.inside.cols = 3
+        self.inside.cols = 4
 
-        self.enter = Button(text="Submit", font_size=40)
+        self.enter = Button(text="Submit")
         self.inside.add_widget(self.enter)
         self.enter.bind(on_press=self.enter_f)
-        self.reset = Button(text="Reset", font_size=40)
+        self.reset = Button(text="Reset")
         self.inside.add_widget(self.reset)
         self.reset.bind(on_press=self.reset_f)
-        self.new_day = Button(text="New Day", font_size=40)
+        self.new_day = Button(text="New Day")
         self.inside.add_widget(self.new_day)
         self.new_day.bind(on_press=self.new_day_f)
+        self.model_switch = Button(text="Switch Models")
+        self.inside.add_widget(self.model_switch)
+        self.model_switch.bind(on_press=self.model_switch_f)
 
 
         # Lets chuck the inner grid into the main grid:
         self.add_widget(self.inside)
 
     def enter_f(self,instance):
-        global full_prompt,convo_cost
+        global full_prompt,convo_cost,ID,AI,initial_prompt
         text = self.prompt.text
-        full_prompt += f"\nHuman: {text}\nAI:"
+        full_prompt += f"\n{ID}: {text}\n{AI}:"
         ai_output = run_chatbot(full_prompt)
         full_prompt += f"{ai_output[0]}"
         cost_of_op = ai_output[1]
 
-        self.chatbox.text = f"{full_prompt} / Costing {cost_of_op}"
+        self.chatbox.text = f"{full_prompt[len(initial_prompt)::]} - Costing {cost_of_op}"
         self.prompt.text = ""
         convo_cost+=cost_of_op
-        self.subtitle3.text = f"Current Cost of Convosation = {convo_cost}"
+        self.subtitle3.text = f"Current Cost of Conversation = {convo_cost}"
 
         print("That cost:",cost_of_op)
         update_cost_files(model, cost_of_op)
@@ -161,6 +193,13 @@ class MyGrid(GridLayout):
         convo_cost = 0
         self.subtitle3.text = f"Current Cost of Convosation = {convo_cost}"
 
+        self.subtitle2.text = f"Current Cost of model {model} = {find_total_cost(model)}"
+    def model_switch_f(self,instance):
+        global model
+        if model=="j1-large":
+            model= "j1-jumbo"
+        else:
+            model = "j1-large"
         self.subtitle2.text = f"Current Cost of model {model} = {find_total_cost(model)}"
 
 
